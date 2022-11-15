@@ -75,13 +75,19 @@ setdiff(fishdisp$FISHDISP, ne$FISHDISP)
 ne <- merge(ne, fishdisp[, c("FISHDISP", "FISHDISPDESC", "HMS_disp_BD")], 
             all.x = T)
 
+
 table(ne$FISHDISPDESC[ne$COMNAME == "DOGFISH, SMOOTH"], # all good
       ne$FISHDISP[ne$COMNAME == "DOGFISH, SMOOTH"])
 
-# reclassify
-ne$HMS_Disp <- ifelse(is.na(ne$HMS_disp_BD), "DISCARD", "KEPT")
+# reclassify -- updated 11/15/2022 -- 
+  # HB provided table w/ anything starts with 1 is kept, else discard
+#ne$HMS_Disp <- ifelse(is.na(ne$HMS_disp_BD), "DISCARD", "KEPT")
+ne$HMS_Disp <- ifelse(substr(ne$FISHDISP, 1, 1) == '1', "KEPT", "DISCARD")
 table(ne$HMS_Disp)
 table(is.na(ne$HMS_Disp))
+
+table(ne$FISHDISPDESC, ne$HMS_Disp)
+
 
 # indicate if they are smooth dogfish sets 
 dogfishSp <- subset(sp, grepl("MUSTELUS", sp$SCINAME))
@@ -100,9 +106,6 @@ head(ne$T_TARGET5)
 
 targ_cols <- names(ne)[grepl("TARGET", names(ne))]
 
-apply(ne[, targ_cols], 1, function(x) {
-  ifelse(x %in% dogfishSp$NESPP4, 1, 0)
-})
 
 # for smooth dogfish only 
 t <- ne %>% 
@@ -117,9 +120,10 @@ t1 <- ne %>%
 ## Okay, so this data looks like it is only targeting smooth dogfish 
 
 ## SUBSET FOR ONLY SMOOTH DOGFISH?
+smoothdog <- subset(ne, NESPP4 %in% dogfishSp$NESPP4)
 
 # convert to dw lbs - only smooth dogfish 
-smoothdog <- subset(ne, NESPP4 %in% dogfishSp$NESPP4)
+
 
 
 
@@ -153,6 +157,12 @@ smoothdog$dw_lbs <- ifelse(smoothdog$D_R == "ROUND", smoothdog$HAILWT / 1.43,
 sd_catch <- smoothdog %>%
   group_by(YEAR, HMS_Disp) %>%
   summarize(tot_dwlbs = sum(dw_lbs), 
-            n_vessels = n_distinct(HULLNUM1))
-  
+            n_vessels = n_distinct(HULLNUM1)) %>%
+  ungroup() %>%
+  group_by(YEAR) %>%
+  mutate(annual_dwlbs = sum(tot_dwlbs)) %>%
+  ungroup() %>%
+  mutate(prop_disp = tot_dwlbs / annual_dwlbs)
+
+sd_catch  
 

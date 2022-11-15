@@ -25,6 +25,8 @@
 
 # Methods -----------------------------------------------------------------
 
+# 1.43 used for round to DW conversion
+
 
 
 # Libraries ---------------------------------------------------------------
@@ -55,24 +57,69 @@ rm(dirs, i)
 
 # Load Data ---------------------------------------------------------------
 
-# base path
+## Smooth Dogfish (Section 5.3.7)
+# base path for Smooth Dogfish
 smoothdog_path <- "G:/SF1/SHARKS/Observers/Data/NE Observer Data/NE Smooth Dogfish Data/"
 
-ne18 <- read_xlsx(paste0(smoothdog_path, "2018/2018_smooth_dogfish.xlsx"))
+#ne18 <- read_xlsx(paste0(smoothdog_path, "2018/2018_smooth_dogfish.xlsx")) # omit - only doing 3 years
 ne19 <- read_xlsx(paste0(smoothdog_path, "2019/2019_smooth_dogfish_trips.xlsx"))
 ne20 <- read_xlsx(paste0(smoothdog_path, "2020/2020_smooth_dogfish_trips.xlsx"))
 ne21 <- read_xlsx(paste0(smoothdog_path, "2021_smooth_dogfish_trips.xlsx"))
 
 
+## Non-HMS Target Fisheries (Section 5.4.2) 
+# G:\SF1\SHARKS\Observers\Data\NE Observer Data
+nthms <- read_xlsx("G:/SF1/SHARKS/Observers/Data/NE Observer Data/2021_HMS.xlsx", 
+                   sheet = "Export Worksheet")
 
-# Prototyping -------------------------------------------------------------
+# Smooth Dogfish   ---------------------------------------------------------
 
-# 2018 = 105,942; 2019 = 83426; 2020 = 4406 (lb dw)
-head(ne18)
-sum(ne18$HAILWT) # weight 
-table(ne18$DRFLAG) # grade
+# how different are all the names
+setdiff(names(ne18), names(ne19))
+setdiff(names(ne19), names(ne18))
 
-ne18$lb_dw <- ifelse(ne18$DRFLAG == "ROUND", ne18$HAILWT / 1.43, 
-                     ne18$HAILWT)
-sum(ne18$lb_dw)
+setdiff(names(ne20), names(ne21))
 
+
+# include year for all datasetsx
+year <- 2019 # starting year
+
+ne_list <- list(ne19, ne20, ne21)
+
+for (i in seq_along(ne_list)) {
+  ne_list[[i]][ , dim(ne_list[[i]])[2]+1] = as.character(rep(year), dim(ne_list[[i]])[1])
+  year <- year + 1
+}
+
+# fix name 
+ne_list <- lapply(ne_list, function(x) {
+  colnames(x)[grepl("\\.", colnames(x))] = "year"
+  x
+})
+
+lapply(ne_list, function(x) head(x$year))
+
+# combine
+ne <- bind_rows(ne_list)
+
+# write all these data to local folder 
+write_xlsx(ne, 
+           here::here("output", paste0("NE_obs_2019-2021_", Sys.Date(), ".xlsx")))
+
+
+
+# Non-Target HMS  ---------------------------------------------------------
+
+# looking at catch of HMS in NON-SMOOTHDOGFISH, GILLNETS
+# All Interactions, but reporting:
+  # total number caught
+  # number kept by PERCENT
+
+glimpse(nthms)
+
+table(nthms$GEARNM)
+table(nthms$GEARNUM)
+
+# write to local folder 
+write_xlsx(nthms, 
+           here::here("output", paste0("NE_obs_non-target_HMS_", Sys.Date(), ".xlsx")))
