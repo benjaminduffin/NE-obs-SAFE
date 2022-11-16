@@ -216,6 +216,17 @@ nt_spr <- nthms %>%
 )
 
 
+## From section 5.3.7 - vessels targeting other sharks 
+# sets, trips
+(
+  nt_gillnet_otherShark_targ <- nthms %>%
+    filter(HMS_gear %in% c("DRIFT GILLNET", "SINK GILLNET") & shark_targ == "1") %>%
+    summarize(n_trips = n_distinct(TRIPID), 
+              n_sets = n_distinct(trip.set), 
+              n_vessels = n_distinct(HULLNUM1))
+)
+
+
 # Prototyping -------------------------------------------------------------
 
 targ_cols <- names(nthms)[grepl("TARGSPEC", names(nthms))]

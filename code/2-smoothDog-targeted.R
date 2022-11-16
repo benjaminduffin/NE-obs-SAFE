@@ -123,7 +123,8 @@ t1 <- ne %>%
 smoothdog <- subset(ne, NESPP4 %in% dogfishSp$NESPP4)
 
 # convert to dw lbs - only smooth dogfish 
-
+smoothdog$dw_lbs <- ifelse(smoothdog$D_R == "ROUND", smoothdog$HAILWT / smoothdog$conversion_factor, 
+                           smoothdog$HAILWT)
 
 
 
@@ -145,7 +146,11 @@ ne %>%
   summarize(n_sets = n_distinct(trip.set), 
             n_vessels = n_distinct(HULLNUM1))
 
-
+# number of sets with dogfish catch 
+smoothdog %>%
+  mutate(trip.set = paste0(TRIPID, ".", HAULNUM)) %>%
+  group_by(YEAR) %>%
+  summarize(n_sets_catch = n_distinct(trip.set))
 
 
 ## Catch 
