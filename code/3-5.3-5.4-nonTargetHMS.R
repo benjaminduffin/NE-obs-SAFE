@@ -148,6 +148,16 @@ table(shark_targ_ind)
 # add to the data frame
 nthms$shark_targ <- shark_targ_ind
 
+# also add in the target species (commonname)
+sp_comname_code <- sp[, c("NESPP4", "COMNAME")]
+names(sp_comname_code) <- c("NESPP4", "targ1_comname")
+
+nthms <- merge(nthms, sp_comname_code, 
+                             by.x = "TARGSPEC1", by.y = "NESPP4", 
+                             all.x = T)
+table(nthms$targ1_comname)
+
+
 # Analysis ----------------------------------------------------------------
 
 # how many by gear type? 
@@ -226,6 +236,20 @@ nt_spr <- nthms %>%
               n_vessels = n_distinct(HULLNUM1))
 )
 
+
+## Section 5.4.3 - Other Fisheries 
+# HMS interactions by TARGET SPECIES?
+# # interactions by STATUS
+(
+nt_trawl_top_sp <- nthms %>% 
+  filter(HMS_gear == "TRAWL") %>%
+  group_by(targ1_comname, COMNAME, HMS_disp) %>%
+  summarize(n_caught = n()) %>%
+    pivot_wider(names_from = HMS_disp, 
+                values_from = c(n_caught),  
+                values_fill = 0) %>%
+    mutate(n_tot = sum(DISCARD, KEPT))
+)
 
 # Prototyping -------------------------------------------------------------
 
