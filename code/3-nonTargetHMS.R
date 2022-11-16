@@ -62,7 +62,7 @@ glimpse(fishdisp)
 # bring in the observer species 
 sp <- read_xlsx(here::here("data", "OBSPEC.xlsx"))
 
-# non-dogfish species 
+# non-dogfish sharks
 othShark <- subset(sp, grepl("SHARK", sp$COMNAME))
 
 
@@ -116,9 +116,105 @@ sp <- sp %>%
                                 ifelse(grepl("SWORD", COMNAME), "1", 
                                        "0"))))
 
+# remove blackfin tuna, etc
+sp_rm <- c("4640", "4641", "4656", "4657", "4680", "4682")
+
+# switch those to 0 for hms
+sp$hms_sp <- ifelse(sp$NESPP4 %in% sp_rm, "0", sp$hms_sp)
+
+hmsSp_codes <- unique(sp$NESPP4[sp$hms_sp == "1"])
+
+nthms$hms_sp <- ifelse(nthms$NESPP4 %in% hmsSp_codes, "1", "0")
+
+table(nthms$hms_sp)
+
+table(nthms$COMNAME[nthms$hms_sp == "0"]) # unknown tuna - I didn't include
+
+# at least we know they are all hms species 
+
+## Trips targeting species that ARE NOT sharks or dogfish
+# target columns 
+targ_cols <- names(nthms)[grepl("TARGSPEC", names(nthms))]
+
+head(nthms[, targ_cols])
+
+apply(nthms[, targ_cols], 2, function(x) sum(x == '0000', na.rm = T))
+
+# need to determine if othShark in the target columns 
+shark_targ_ind <- ifelse(apply(nthms[, targ_cols], 1, function(x) 
+   any(x %in% unique(othShark$NESPP4))), 
+                           "1", "0")
+table(shark_targ_ind)
+# add to the data frame
+nthms$shark_targ <- shark_targ_ind
+
 # Analysis ----------------------------------------------------------------
 
-# number of trips 
+# how many by gear type? 
+
+
+## General info - trips, sets, n vessels - gillnets
+(
+nt_summary <- nthms %>%
+  summarize(n_trips = n_distinct(TRIPID), 
+            n_sets = n_distinct(trip.set), 
+            n_vessels = n_distinct(HULLNUM1))
+)
+
+## non-target species retained - total n and kept%
+(
+nt_spr <- nthms %>% 
+  filter(HMS_gear %in% c("DRIFT GILLNET", "SINK GILLNET")) %>%
+  group_by(COMNAME, HMS_disp) %>%
+  summarize(n_tot = n(), 
+            n_vessels = n_distinct(HULLNUM1)) %>%
+  pivot_wider(names_from = HMS_disp, 
+              values_from = c(n_tot, n_vessels),  
+              values_fill = 0) %>%
+  mutate(n_tot = sum(n_tot_DISCARD, n_tot_KEPT), 
+         n_vessels = sum(n_vessels_DISCARD, n_vessels_KEPT), 
+         kept_perc = n_tot_KEPT / n_tot) %>%
+  select(COMNAME, n_tot_DISCARD, n_tot_KEPT, n_tot, kept_perc, n_vessels) %>%
+  arrange(desc(n_tot))
+)  
+
+## drift gillnet only - sets, trip, vessels
+(
+  nt_dg_summary <- nthms %>%
+    filter(HMS_gear == "DRIFT GILLNET") %>%
+    summarize(n_trips = n_distinct(TRIPID), 
+              n_sets = n_distinct(trip.set), 
+              n_vessels = n_distinct(HULLNUM1))
+    
+)
+
+## drift gillnet only - catch from NOT TARGETTING SHARK OR DOGFISH
+(
+  nt_dg_catch <- nthms %>%
+    filter(HMS_gear == "DRIFT GILLNET") %>%
+    group_by(COMNAME) %>%
+    summarize(n_caught = n()) %>%
+    arrange(desc(n_caught))
+)
+
+## sink gillnet only - sets, trips, vessels
+(
+  nt_sg_summary <- nthms %>%
+    filter(HMS_gear == "SINK GILLNET") %>%
+    summarize(n_trips = n_distinct(TRIPID), 
+              n_sets = n_distinct(trip.set), 
+              n_vessels = n_distinct(HULLNUM1))
+  
+)
+## sink gillnet only - catch from NOT TARGGETING SHARK OR DOGFISH
+(
+  nt_sg_catch <- nthms %>%
+    filter(HMS_gear == "SINK GILLNET") %>%
+    group_by(COMNAME) %>%
+    summarize(n_caught = n()) %>%
+    arrange(desc(n_caught))
+)
+
 
 # Prototyping -------------------------------------------------------------
 
