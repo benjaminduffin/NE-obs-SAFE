@@ -160,12 +160,36 @@ table(nthms$targ1_comname)
 
 # Analysis ----------------------------------------------------------------
 
-# how many by gear type? 
+# hGeneral Info - trips, set, n _vessels - 
+(
+nt_bll_summary <- nthms %>%
+  filter(HMS_gear %in% c("BOTTOM LONGLINE")) %>%
+  summarize(n_trips = n_distinct(TRIPID), 
+            n_sets = n_distinct(trip.set), 
+            n_vessels = n_distinct(HULLNUM1))
+)
 
+# HMS Species Caught and retained in the BLL fishery observed by NEFOP
+(
+nt_bll_catch <- nthms %>% 
+    filter(HMS_gear %in% c("BOTTOM LONGLINE")) %>%
+    group_by(COMNAME, HMS_disp) %>%
+    summarize(n_tot = n(), 
+              n_vessels = n_distinct(HULLNUM1)) %>%
+    pivot_wider(names_from = HMS_disp, 
+                values_from = c(n_tot, n_vessels), 
+                values_fill = 0) %>%
+    mutate(n_tot = sum(n_tot_DISCARD, n_tot_KEPT), 
+           n_vessels = sum(n_vessels_DISCARD, n_vessels_KEPT), 
+           kept_perc = n_tot_KEPT / n_tot) %>%
+    select(COMNAME, n_tot_DISCARD, n_tot_KEPT, n_tot, kept_perc, n_vessels) %>%
+    arrange(desc(n_tot))
+)
 
 ## General info - trips, sets, n vessels - gillnets
 (
 nt_summary <- nthms %>%
+  filter(HMS_gear %in% c("DRIFT GILLNET", "SINK GILLNET")) %>%
   summarize(n_trips = n_distinct(TRIPID), 
             n_sets = n_distinct(trip.set), 
             n_vessels = n_distinct(HULLNUM1))
